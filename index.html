@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Comparative vs Superlative Quiz</title>
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --success: #2ecc71;
+            --error: #e74c3c;
+            --dark: #2c3e50;
+            --light: #f8f9fa;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: var(--dark);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+        }
+
+        .quiz-container {
+            background: #ffffff;
+            width: 100%;
+            max-width: 600px;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.2s ease;
+        }
+
+        /* Progress & Timer Headers */
+        .quiz-header {
+            padding: 15px 20px;
+            background: var(--light);
+            border-bottom: 1px solid #e1e4e8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .timer-container {
+            width: 100%;
+            height: 6px;
+            background-color: #e1e4e8;
+            position: relative;
+        }
+
+        .timer-bar {
+            height: 100%;
+            width: 100%;
+            background-color: var(--primary);
+            transition: width 0.1s linear;
+        }
+
+        /* Question Section */
+        .question-section {
+            padding: 30px 20px;
+            text-align: center;
+            font-size: 1.3rem;
+            font-weight: 500;
+            line-height: 1.5;
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Fat-Finger Buttons */
+        .options-section {
+            padding: 0 20px 25px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option-btn {
+            width: 100%;
+            min-height: 60px; /* Fat-finger target */
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--dark);
+            background-color: var(--light);
+            border: 2px solid #cbd5e1;
+            border-radius: 12px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.1s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Active/Hover states optimized for touch exclusion where necessary */
+        @media (hover: hover) {
+            .option-btn:hover:not([disabled]) {
+                border-color: var(--primary);
+                background-color: #eef5fc;
+            }
+        }
+
+        .option-btn:active:not([disabled]) {
+            background-color: #e2e8f0;
+        }
+
+        /* Visual Flash Feedback Classes */
+        .quiz-container.flash-correct {
+            background-color: rgba(46, 204, 113, 0.15);
+        }
+        .quiz-container.flash-wrong {
+            background-color: rgba(231, 76, 60, 0.15);
+        }
+
+        .option-btn.correct {
+            background-color: var(--success) !important;
+            border-color: var(--success) !important;
+            color: white !important;
+        }
+
+        .option-btn.wrong {
+            background-color: var(--error) !important;
+            border-color: var(--error) !important;
+            color: white !important;
+        }
+
+        /* Score Screen */
+        .score-screen {
+            padding: 40px 20px;
+            text-align: center;
+            display: none;
+        }
+
+        .score-title {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            color: var(--primary);
+        }
+
+        .score-text {
+            font-size: 1.4rem;
+            margin-bottom: 30px;
+        }
+
+        .restart-btn {
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: white;
+            background-color: var(--primary);
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            min-height: 55px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="quiz-container" id="quizBox">
+        <!-- Active Quiz UI -->
+        <div id="quizGameplay">
+            <div class="quiz-header">
+                <span id="progressText">Question 1/30</span>
+                <span id="timerText">45s</span>
+            </div>
+            <div class="timer-container">
+                <div class="timer-bar" id="timerBar"></div>
+            </div>
+            <div class="question-section" id="questionText">
+                Loading question...
+            </div>
+            <div class="options-section" id="optionsContainer">
+                <!-- Buttons injected dynamically -->
+            </div>
+        </div>
+
+        <!-- End Score UI -->
+        <div class="score-screen" id="scoreScreen">
+            <h2 class="score-title">Quiz Completed!</h2>
+            <p class="score-text" id="finalScoreDisplay">You scored 0 out of 30</p>
+            <button class="restart-btn" id="restartBtn">Try Again</button>
+        </div>
+    </div>
+
+    <script>
+        // 30 Complete Grammar-Focused Questions
+        const questions = [
+            { q: "This laptop is ________ than my old one.", a: ["more expensive", "most expensive", "expensiver", "expensive"], c: "more expensive" },
+            { q: "Mount Everest is the ________ mountain in the world.", a: ["higher", "highest", "most high", "more high"], c: "highest" },
+            { q: "Learning English is ________ than I thought.", a: ["easyer", "easier", "more easy", "most easy"], c: "easier" },
+            { q: "That was the ________ movie I have ever seen.", a: ["baddest", "worse", "worst", "most bad"], c: "worst" },
+            { q: "My brother is ________ than me.", a: ["taller", "tallest", "more tall", "most tall"], c: "taller" },
+            { q: "The Amazon is the ________ river across South America.", a: ["longer", "longest", "more long", "most long"], c: "longest" },
+            { q: "This restaurant is ________ than the one down the street.", a: ["gooder", "better", "best", "more good"], c: "better" },
+            { q: "Iron is ________ than wood.", a: ["heavyer", "heavier", "more heavy", "most heavy"], c: "heavier" },
+            { q: "She is the ________ student in our class.", a: ["smartest", "smarter", "most smart", "smart"], c: "smartest" },
+            { q: "Gold is ________ than silver.", a: ["valuabler", "more valuable", "most valuable", "valuable"], c: "more valuable" },
+            { q: "Today is ________ than yesterday.", a: ["hoter", "hotter", "hottest", "more hot"], c: "hotter" },
+            { q: "The test was the ________ event of the term.", a: ["most difficult", "more difficult", "difficulter", "difficultest"], c: "most difficult" },
+            { q: "Your dog runs ________ than mine.", a: ["fast", "faster", "fastest", "more fast"], c: "faster" },
+            { q: "That is the ________ story I've ever heard.", a: ["funnier", "funniest", "most funny", "funnyest"], c: "funniest" },
+            { q: "A car is ________ than a bicycle.", a: ["more fast", "faster", "fastest", "more faster"], c: "faster" },
+            { q: "He bought the ________ coat in the store.", a: ["less expensive", "least expensive", "expensivest", "expensive"], c: "least expensive" },
+            { q: "This street is ________ than the main road.", a: ["narrower", "more narrow", "narrowest", "both narrower and more narrow"], c: "both narrower and more narrow" },
+            { q: "It was the ________ day of my life.", a: ["happiest", "happyest", "happier", "most happy"], c: "happiest" },
+            { q: "The city center is ________ than the countryside.", a: ["noisier", "noisyer", "more noisy", "noisiest"], c: "noisier" },
+            { q: "The Mona Lisa is one of the ________ paintings globally.", a: ["famousest", "more famous", "most famous", "famouser"], c: "most famous" },
+            { q: "A cheetah is ________ than a lion.", a: ["fastest", "faster", "more faster", "fast"], c: "faster" },
+            { q: "This book is ________ than the film version.", a: ["badder", "worse", "worst", "more bad"], c: "worse" },
+            { q: "Jupiter is the ________ planet in our solar system.", a: ["bigger", "biggest", "biger", "bigest"], c: "biggest" },
+            { q: "Staying at home is ________ than going out in the rain.", a: ["comfortabler", "more comfortable", "most comfortable", "comfortable"], c: "more comfortable" },
+            { q: "He is the ________ athlete on the entire team.", a: ["younger", "youngest", "more young", "most young"], c: "youngest" },
+            { q: "The climate here is getting ________ every year.", a: ["dryer", "drier", "driest", "more dry"], c: "drier" },
+            { q: "This is the ________ cake you have ever baked!", a: ["deliciousest", "more delicious", "most delicious", "delicious"], c: "most delicious" },
+            { q: "A sofa is ________ than a wooden stool.", a: ["soft", "softer", "softest", "more soft"], c: "softer" },
+            { q: "Who is the ________ person in your family?", a: ["oldest", "elder", "more old", "most old"], c: "oldest" },
+            { q: "This pattern is ________ than the other one.", a: ["simpler", "more simple", "simplest", "both simpler and more simple"], c: "both simpler and more simple" }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let timerInterval = null;
+        let timeLeft = 45;
+        const totalTime = 45;
+        
+        // Double-Tap Protection Lock variable
+        let isAnswered = false;
+
+        // DOM elements
+        const quizBox = document.getElementById('quizBox');
+        const quizGameplay = document.getElementById('quizGameplay');
+        const questionText = document.getElementById('questionText');
+        const optionsContainer = document.getElementById('optionsContainer');
+        const progressText = document.getElementById('progressText');
+        const timerText = document.getElementById('timerText');
+        const timerBar = document.getElementById('timerBar');
+        const scoreScreen = document.getElementById('scoreScreen');
+        const finalScoreDisplay = document.getElementById('finalScoreDisplay');
+        const restartBtn = document.getElementById('restartBtn');
+
+        // Initialize App using Standard Event Listeners
+        window.addEventListener('DOMContentLoaded', () => {
+            startQuiz();
+            restartBtn.addEventListener('click', startQuiz);
+        });
+
+        function startQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            scoreScreen.style.display = 'none';
+            quizGameplay.style.display = 'block';
+            showQuestion();
+        }
+
+        function showQuestion() {
+            // Reset state and unlock interface
+            isAnswered = false;
+            quizBox.className = "quiz-container"; 
+            optionsContainer.innerHTML = '';
+            
+            let currentQuestion = questions[currentQuestionIndex];
+            
+            // Set Text content safely
+            progressText.textContent = `Question ${currentQuestionIndex + 1}/${questions.length}`;
+            questionText.textContent = currentQuestion.q;
+
+            // Generate options as input-neutralized button elements
+            currentQuestion.a.forEach(optionText => {
+                const button = document.createElement('button');
+                button.className = 'option-btn';
+                button.textContent = optionText;
+                // Bind choice action securely using modern event listener
+                button.addEventListener('click', () => handleAnswer(button, optionText));
+                optionsContainer.appendChild(button);
+            });
+
+            startTimer();
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            timeLeft = totalTime;
+            timerText.textContent = `${timeLeft}s`;
+            timerBar.style.width = '100%';
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerText.textContent = `${timeLeft}s`;
+                
+                // Track percentage dynamically
+                const percent = (timeLeft / totalTime) * 100;
+                timerBar.style.width = `${percent}%`;
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    handleTimeout();
+                }
+            }, 1000);
+        }
+
+        function handleAnswer(selectedButton, chosenValue) {
+            // Anti-Bug Guard: Block execution if lock variable is active
+            if (isAnswered) return;
+            isAnswered = true; // Engage double-tap lock
+            
+            clearInterval(timerInterval);
+
+            const currentQuestion = questions[currentQuestionIndex];
+            
+            // Hardened Comparison: sanitize spaces and casing perfectly
+            const cleanChoice = chosenValue.trim().toLowerCase();
+            const cleanCorrect = currentQuestion.c.trim().toLowerCase();
+
+            const allButtons = optionsContainer.querySelectorAll('.option-btn');
+            
+            if (cleanChoice === cleanCorrect) {
+                score++;
+                selectedButton.classList.add('correct');
+                quizBox.classList.add('flash-correct'); // Visual flash green
+            } else {
+                selectedButton.classList.add('wrong');
+                quizBox.classList.add('flash-wrong'); // Visual flash red
+                // Highlight the correct answer explicitly to the user
+                allButtons.forEach(btn => {
+                    if (btn.textContent.trim().toLowerCase() === cleanCorrect) {
+                        btn.classList.add('correct');
+                    }
+                });
+            }
+
+            // Lock all option interactions immediately
+            allButtons.forEach(btn => btn.disabled = true);
+
+            // Wait 1.5 seconds for visual assimilation before advancing
+            setTimeout(advanceQuiz, 1500);
+        }
+
+        function handleTimeout() {
+            if (isAnswered) return;
+            isAnswered = true;
+
+            quizBox.classList.add('flash-wrong');
+            const cleanCorrect = questions[currentQuestionIndex].c.trim().toLowerCase();
+            
+            const allButtons = optionsContainer.querySelectorAll('.option-btn');
+            allButtons.forEach(btn => {
+                if (btn.textContent.trim().toLowerCase() === cleanCorrect) {
+                    btn.classList.add('correct');
+                }
+                btn.disabled = true;
+            });
+
+            setTimeout(advanceQuiz, 1500);
+        }
+
+        function advanceQuiz() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                showQuestion();
+            } else {
+                showEndScreen();
+            }
+        }
+
+        function showEndScreen() {
+            clearInterval(timerInterval);
+            quizGameplay.style.display = 'none';
+            scoreScreen.style.display = 'block';
+            finalScoreDisplay.textContent = `You scored ${score} out of ${questions.length}`;
+        }
+    </script>
+</body>
+</html>
